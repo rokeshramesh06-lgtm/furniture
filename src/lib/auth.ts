@@ -8,7 +8,6 @@ import {
   deleteSessionByTokenHash,
   getUserFromSessionTokenHash,
   insertSession,
-  touchPresence,
 } from "@/lib/db";
 
 const SESSION_COOKIE = "chatting_session";
@@ -67,11 +66,9 @@ export async function getSessionUser() {
   const user = getUserFromSessionTokenHash(hashToken(token));
 
   if (!user) {
-    cookieStore.delete(SESSION_COOKIE);
     return null;
   }
 
-  touchPresence(user.id);
   return user;
 }
 
