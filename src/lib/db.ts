@@ -1,7 +1,6 @@
 import "server-only";
 
 import { mkdirSync } from "node:fs";
-import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import type {
@@ -12,9 +11,8 @@ import type {
   ConversationSummary,
   SessionUser,
 } from "@/lib/types";
+import { getDatabaseFilePath, getStorageRoot } from "@/lib/storage";
 
-const DB_DIRECTORY = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DB_DIRECTORY, "chatting.sqlite");
 const ONLINE_WINDOW_MS = 70_000;
 
 declare global {
@@ -22,9 +20,9 @@ declare global {
 }
 
 function createDatabase() {
-  mkdirSync(DB_DIRECTORY, { recursive: true });
+  mkdirSync(getStorageRoot(), { recursive: true });
 
-  const database = new DatabaseSync(DB_PATH);
+  const database = new DatabaseSync(getDatabaseFilePath());
   database.exec(`
     PRAGMA busy_timeout = 5000;
     PRAGMA foreign_keys = ON;
@@ -816,7 +814,7 @@ export function getUserFromSessionTokenHash(tokenHash: string) {
 }
 
 export function getDatabasePath() {
-  return DB_PATH;
+  return getDatabaseFilePath();
 }
 
 export function describeConversation(userId: number, conversationId: number) {

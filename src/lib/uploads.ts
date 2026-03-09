@@ -5,8 +5,8 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 import type { AttachmentKind } from "@/lib/types";
+import { getUploadPublicPath, getUploadsDirectory } from "@/lib/storage";
 
-const UPLOAD_DIRECTORY = path.join(process.cwd(), "public", "uploads");
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 function getSafeExtension(fileName: string) {
@@ -35,16 +35,18 @@ async function saveIncomingFile(file: File, prefix: string) {
     throw new Error("Files must be 25MB or smaller.");
   }
 
-  await mkdir(UPLOAD_DIRECTORY, { recursive: true });
+  const uploadsDirectory = getUploadsDirectory();
+
+  await mkdir(uploadsDirectory, { recursive: true });
 
   const extension = getSafeExtension(file.name);
   const fileName = `${prefix}-${randomUUID()}${extension}`;
-  const filePath = path.join(UPLOAD_DIRECTORY, fileName);
+  const filePath = path.join(uploadsDirectory, fileName);
   const bytes = Buffer.from(await file.arrayBuffer());
 
   await writeFile(filePath, bytes);
 
-  return `/uploads/${fileName}`;
+  return getUploadPublicPath(fileName);
 }
 
 export async function saveAttachment(file: File) {
