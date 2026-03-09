@@ -19,6 +19,9 @@
 
 # production
 /build
+/data
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # misc
 .DS_Store
