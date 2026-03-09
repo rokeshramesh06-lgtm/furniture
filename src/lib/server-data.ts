@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  ensureDemoInboxForUser,
   getConversationMessages,
   getUserById,
   listContactsForUser,
@@ -8,6 +9,8 @@ import {
 } from "@/lib/db";
 
 export function getBootstrapPayload(userId: number) {
+  ensureDemoInboxForUser(userId);
+
   return {
     currentUser: getUserById(userId),
     contacts: listContactsForUser(userId),

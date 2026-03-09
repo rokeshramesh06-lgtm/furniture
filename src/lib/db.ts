@@ -14,6 +14,48 @@ import type {
 import { getDatabaseFilePath, getStorageRoot } from "@/lib/storage";
 
 const ONLINE_WINDOW_MS = 70_000;
+const DEMO_PASSWORD_HASH = `${"a".repeat(32)}:${"b".repeat(128)}`;
+const DEMO_CONTACT_NAMES = [
+  "Aarav Lane 01",
+  "Mira Stone 02",
+  "Noah Vale 03",
+  "Isha Reed 04",
+  "Kabir Frost 05",
+  "Nina Hart 06",
+  "Zayn Cole 07",
+  "Tara Bloom 08",
+  "Arjun Miles 09",
+  "Lena West 10",
+  "Dev Nash 11",
+  "Sana Crest 12",
+  "Rohan Lake 13",
+  "Kiara Dawn 14",
+  "Vihaan Park 15",
+  "Aisha Lane 16",
+  "Neel Gray 17",
+  "Diya Flint 18",
+  "Ira Woods 19",
+  "Reyansh Vale 20",
+  "Meera Cove 21",
+  "Aria Kent 22",
+  "Ayaan Frost 23",
+  "Riya Hale 24",
+  "Veer Quinn 25",
+] as const;
+const DEMO_STATUSES = [
+  "Wrapping up a quick design review.",
+  "Available for planning and check-ins.",
+  "Collecting ideas for the next launch.",
+  "Online and ready to reply fast.",
+  "Keeping the team synced this afternoon.",
+] as const;
+const DEMO_OPENERS = [
+  "Quick heads up, I pushed a fresh update for the group.",
+  "Can we lock the plan before the evening rush starts?",
+  "I dropped the notes in chat so everyone stays aligned.",
+  "Sharing a calm check-in before the next round of work.",
+  "I have a couple of ideas for the next conversation thread.",
+] as const;
 
 declare global {
   var __chattingDb: DatabaseSync | undefined;
@@ -129,6 +171,75 @@ function normalizePhone(value: string | null | undefined) {
 
 function isOnline(lastSeen: string) {
   return Date.now() - new Date(lastSeen).getTime() < ONLINE_WINDOW_MS;
+}
+
+function getDemoContactProfile(index: number) {
+  const padded = String(index + 1).padStart(2, "0");
+
+  return {
+    email: `demo-${padded}@velvetchat.demo`,
+    username: DEMO_CONTACT_NAMES[index],
+    status: DEMO_STATUSES[index % DEMO_STATUSES.length],
+    opener: DEMO_OPENERS[index % DEMO_OPENERS.length],
+    lastSeen: new Date(Date.now() - (index % 8) * 9 * 60_000).toISOString(),
+  };
+}
+
+function getMessageCount(conversationId: number) {
+  const row = db
+    .prepare(
+      `
+        SELECT COUNT(*) AS count
+        FROM messages
+        WHERE conversation_id = ?
+      `,
+    )
+    .get(conversationId) as { count: number };
+
+  return row.count;
+}
+
+function getOrCreateDemoUser(index: number) {
+  const profile = getDemoContactProfile(index);
+  const existing = db
+    .prepare(
+      `
+        SELECT id
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+      `,
+    )
+    .get(profile.email) as { id: number } | undefined;
+
+  if (existing) {
+    db.prepare(
+      `
+        UPDATE users
+        SET username = ?, status_text = ?, last_seen = ?
+        WHERE id = ?
+      `,
+    ).run(profile.username, profile.status, profile.lastSeen, existing.id);
+
+    return existing.id;
+  }
+
+  const created = db
+    .prepare(
+      `
+        INSERT INTO users (email, password_hash, username, status_text, last_seen)
+        VALUES (?, ?, ?, ?, ?)
+      `,
+    )
+    .run(
+      profile.email,
+      DEMO_PASSWORD_HASH,
+      profile.username,
+      profile.status,
+      profile.lastSeen,
+    );
+
+  return Number(created.lastInsertRowid);
 }
 
 function serializeUser(row: {
@@ -811,6 +922,65 @@ export function getUserFromSessionTokenHash(tokenHash: string) {
     | undefined;
 
   return row ? serializeUser(row) : null;
+}
+
+export function ensureDemoInboxForUser(userId: number) {
+  const currentUser = db
+    .prepare(
+      `
+        SELECT email
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+    )
+    .get(userId) as { email: string | null } | undefined;
+
+  if (currentUser?.email?.endsWith("@velvetchat.demo")) {
+    return;
+  }
+
+  const demoConversationCount = db
+    .prepare(
+      `
+        SELECT COUNT(DISTINCT c.id) AS count
+        FROM conversations c
+        INNER JOIN conversation_members mine
+          ON mine.conversation_id = c.id AND mine.user_id = ?
+        INNER JOIN conversation_members others
+          ON others.conversation_id = c.id AND others.user_id != ?
+        INNER JOIN users u ON u.id = others.user_id
+        WHERE c.type = 'direct'
+          AND u.email LIKE '%@velvetchat.demo'
+      `,
+    )
+    .get(userId, userId) as { count: number };
+
+  if (demoConversationCount.count >= DEMO_CONTACT_NAMES.length) {
+    return;
+  }
+
+  for (let index = 0; index < DEMO_CONTACT_NAMES.length; index += 1) {
+    const demoUserId = getOrCreateDemoUser(index);
+
+    if (demoUserId === userId) {
+      continue;
+    }
+
+    const conversationId = createDirectConversation(userId, demoUserId);
+
+    if (getMessageCount(conversationId) > 0) {
+      continue;
+    }
+
+    const profile = getDemoContactProfile(index);
+
+    addMessage({
+      conversationId,
+      senderId: demoUserId,
+      content: profile.opener,
+    });
+  }
 }
 
 export function getDatabasePath() {
