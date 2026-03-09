@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireSessionUser } from "@/lib/auth";
+import { requireSessionUser } from "@/lib/session";
 import { getBootstrapPayload } from "@/lib/server-data";
 
 export const runtime = "nodejs";

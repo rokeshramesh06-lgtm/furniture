@@ -1,6 +1,6 @@
 import { AuthShell } from "@/components/auth-shell";
 import { ChatShell } from "@/components/chat-shell";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser } from "@/lib/session";
 import { getBootstrapPayload, getInitialMessages } from "@/lib/server-data";
 
 export const runtime = "nodejs";

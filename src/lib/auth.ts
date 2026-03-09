@@ -2,11 +2,8 @@ import "server-only";
 
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
-import { cookies } from "next/headers";
-
 import {
   deleteSessionByTokenHash,
-  getUserFromSessionTokenHash,
   insertSession,
 } from "@/lib/db";
 
@@ -58,33 +55,6 @@ export function createSession(userId: number) {
     token,
     expiresAt,
   };
-}
-
-export async function getSessionUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-
-  if (!token) {
-    return null;
-  }
-
-  const user = getUserFromSessionTokenHash(hashToken(token));
-
-  if (!user) {
-    return null;
-  }
-
-  return user;
-}
-
-export async function requireSessionUser() {
-  const user = await getSessionUser();
-
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
-
-  return user;
 }
 
 export function destroySession(token?: string) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireSessionUser } from "@/lib/auth";
+import { requireSessionUser } from "@/lib/session";
 import { touchPresence } from "@/lib/db";
 import { emitRealtimeEvent } from "@/lib/realtime";
 
