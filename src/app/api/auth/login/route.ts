@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createSession,
-  getSessionCookieConfig,
-  SESSION_COOKIE,
+  serializeSessionCookie,
   verifyPassword,
 } from "@/lib/auth";
 import { findUserForLogin } from "@/lib/db";
@@ -26,13 +25,12 @@ export async function POST(request: Request) {
   }
 
   const session = createSession(user.id);
-  const response = NextResponse.json({ ok: true });
-
-  response.cookies.set({
-    ...getSessionCookieConfig(session.expiresAt),
-    name: SESSION_COOKIE,
-    value: session.token,
-  });
-
-  return response;
+  return NextResponse.json(
+    { ok: true },
+    {
+      headers: {
+        "Set-Cookie": serializeSessionCookie(session.token, session.expiresAt),
+      },
+    },
+  );
 }

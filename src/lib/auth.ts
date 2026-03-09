@@ -25,6 +25,44 @@ export function getSessionCookieConfig(expiresAt: string) {
   };
 }
 
+function formatCookieDate(value: Date) {
+  return value.toUTCString();
+}
+
+export function serializeSessionCookie(value: string, expiresAt: string) {
+  const config = getSessionCookieConfig(expiresAt);
+  const parts = [
+    `${config.name}=${encodeURIComponent(value)}`,
+    `Path=${config.path}`,
+    `Expires=${formatCookieDate(config.expires)}`,
+    "HttpOnly",
+    `SameSite=${config.sameSite}`,
+  ];
+
+  if (config.secure) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
+}
+
+export function serializeExpiredSessionCookie() {
+  const parts = [
+    `${SESSION_COOKIE}=`,
+    "Path=/",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    "Max-Age=0",
+    "HttpOnly",
+    "SameSite=lax",
+  ];
+
+  if (process.env.NODE_ENV === "production") {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
+}
+
 export function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const derived = scryptSync(password, salt, 64).toString("hex");
