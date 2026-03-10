@@ -508,6 +508,8 @@ table small,
 
 .modal-header,
 .tab-strip,
+.demo-login-grid,
+.inline-helper,
 .cart-item,
 .cart-item__actions,
 .qty-control,
@@ -531,6 +533,14 @@ table small,
 
 .tab-strip {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.demo-login-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.inline-helper {
+  gap: 10px;
 }
 
 .tab-button {
@@ -767,7 +777,8 @@ td small {
   }
 
   .form-grid,
-  .payment-grid {
+  .payment-grid,
+  .demo-login-grid {
     grid-template-columns: 1fr;
   }
 

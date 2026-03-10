@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { destroySession, serializeExpiredSessionCookie, SESSION_COOKIE } from "@/lib/auth";
+import {
+  destroySession,
+  serializeExpiredSessionCookie,
+  SESSION_COOKIE,
+  shouldUseSecureCookie,
+} from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -18,7 +23,7 @@ export async function POST(request: Request) {
     { ok: true },
     {
       headers: {
-        "Set-Cookie": serializeExpiredSessionCookie(),
+        "Set-Cookie": serializeExpiredSessionCookie(shouldUseSecureCookie(request)),
       },
     },
   );

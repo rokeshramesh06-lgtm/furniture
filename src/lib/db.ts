@@ -1,8 +1,8 @@
 import "server-only";
 
+import Database from "better-sqlite3";
 import { scryptSync } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
 
 import { getDatabaseFilePath, getStorageRoot } from "@/lib/storage";
 import {
@@ -25,7 +25,7 @@ import {
 } from "@/lib/types";
 
 declare global {
-  var __atelierDb: DatabaseSync | undefined;
+  var __atelierDb: Database.Database | undefined;
 }
 
 const SEED_PRODUCTS: ProductInput[] = [
@@ -266,6 +266,20 @@ function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+function deriveNameFromEmail(email: string) {
+  const localPart = normalizeEmail(email).split("@")[0] ?? "";
+  const cleaned = localPart
+    .replace(/[._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) {
+    return "New Customer";
+  }
+
+  return cleaned.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function cleanText(value: string, field: string) {
   const cleaned = value.trim().replace(/\s+/g, " ");
 
@@ -395,7 +409,7 @@ function buildOrders(rows: OrderQueryRow[]): Order[] {
 function createDatabase() {
   mkdirSync(getStorageRoot(), { recursive: true });
 
-  const database = new DatabaseSync(getDatabaseFilePath());
+  const database = new Database(getDatabaseFilePath());
   database.exec(`
     PRAGMA busy_timeout = 5000;
     PRAGMA foreign_keys = ON;
@@ -502,15 +516,15 @@ function getDatabase() {
   return globalThis.__atelierDb;
 }
 
-export const db = new Proxy({} as DatabaseSync, {
+export const db = new Proxy({} as Database.Database, {
   get(_target, property) {
-    const database = getDatabase() as DatabaseSync & Record<PropertyKey, unknown>;
+    const database = getDatabase() as Database.Database & Record<PropertyKey, unknown>;
     const value = database[property];
     return typeof value === "function" ? value.bind(database) : value;
   },
 });
 
-function seedDatabase(database: DatabaseSync) {
+function seedDatabase(database: Database.Database) {
   database.exec("BEGIN");
 
   try {
@@ -638,7 +652,7 @@ function seedDatabase(database: DatabaseSync) {
   }
 }
 
-function seedInitialOrders(database: DatabaseSync) {
+function seedInitialOrders(database: Database.Database) {
   const customer = database
     .prepare(`
       SELECT id, name, email
@@ -782,13 +796,13 @@ function seedInitialOrders(database: DatabaseSync) {
 }
 
 export function createUser(input: {
-  name: string;
+  name?: string;
   email: string;
   passwordHash: string;
   role?: "customer" | "admin";
 }) {
-  const name = cleanText(input.name, "Name");
   const email = normalizeEmail(input.email);
+  const name = cleanText(input.name?.trim() || deriveNameFromEmail(email), "Name");
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Enter a valid email address.");

@@ -7,6 +7,16 @@ import { deleteSessionByTokenHash, insertSession } from "@/lib/db";
 export const SESSION_COOKIE = "atelier_home_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30;
 
+function normalizeHostName(value: string | null) {
+  const host = value?.split(",")[0]?.trim() ?? "";
+  const withoutPort = host.replace(/^\[|\]$/g, "").split(":")[0] ?? "";
+  return withoutPort.toLowerCase();
+}
+
+function isLoopbackHost(host: string) {
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
 export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -34,7 +44,45 @@ function formatCookieDate(value: Date) {
   return value.toUTCString();
 }
 
-export function serializeSessionCookie(token: string, expiresAt: string) {
+export function shouldUseSecureCookie(request: Pick<Request, "url" | "headers">) {
+  const origin = request.headers.get("origin");
+
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+
+      if (isLoopbackHost(originUrl.hostname)) {
+        return false;
+      }
+
+      return originUrl.protocol === "https:";
+    } catch {
+      // Fall through to host/proto checks.
+    }
+  }
+
+  const forwardedHost = normalizeHostName(request.headers.get("x-forwarded-host"));
+  const requestHost = normalizeHostName(request.headers.get("host"));
+  const host = forwardedHost || requestHost;
+
+  if (host && isLoopbackHost(host)) {
+    return false;
+  }
+
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+
+  if (forwardedProto) {
+    return forwardedProto === "https";
+  }
+
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return process.env.NODE_ENV === "production";
+  }
+}
+
+export function serializeSessionCookie(token: string, expiresAt: string, secure = false) {
   const parts = [
     `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
     "Path=/",
@@ -43,14 +91,14 @@ export function serializeSessionCookie(token: string, expiresAt: string) {
     "SameSite=Lax",
   ];
 
-  if (process.env.NODE_ENV === "production") {
+  if (secure) {
     parts.push("Secure");
   }
 
   return parts.join("; ");
 }
 
-export function serializeExpiredSessionCookie() {
+export function serializeExpiredSessionCookie(secure = false) {
   const parts = [
     `${SESSION_COOKIE}=`,
     "Path=/",
@@ -60,7 +108,7 @@ export function serializeExpiredSessionCookie() {
     "SameSite=Lax",
   ];
 
-  if (process.env.NODE_ENV === "production") {
+  if (secure) {
     parts.push("Secure");
   }
 

@@ -93,6 +93,8 @@ export function StorefrontPage({ user, snapshot }: StorefrontPageProps) {
               src="/furniture/room-scene.svg"
               alt="Furniture interior scene"
               fill
+              loading="eager"
+              unoptimized
               sizes="(max-width: 900px) 100vw, 46vw"
               className="hero-scene__image"
             />
@@ -129,6 +131,8 @@ export function StorefrontPage({ user, snapshot }: StorefrontPageProps) {
                   src={product.imagePath}
                   alt={product.name}
                   fill
+                  loading="eager"
+                  unoptimized
                   sizes="(max-width: 900px) 100vw, 25vw"
                   className="product-image__asset"
                 />
@@ -219,6 +223,8 @@ export function StorefrontPage({ user, snapshot }: StorefrontPageProps) {
                   src={product.imagePath}
                   alt={product.name}
                   fill
+                  loading="eager"
+                  unoptimized
                   sizes="(max-width: 900px) 100vw, 25vw"
                   className="product-image__asset"
                 />
