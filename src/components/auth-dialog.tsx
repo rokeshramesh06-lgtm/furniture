@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 const DEMO_ACCOUNTS = [
   {
@@ -26,7 +26,7 @@ export function AuthDialog({ open, onClose }: AuthDialogProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const canCreateFromLogin =
     mode === "login" && email.trim().length > 0 && password.trim().length >= 8;
 
@@ -64,13 +64,16 @@ export function AuthDialog({ open, onClose }: AuthDialogProps) {
     password: string;
   }) {
     setError("");
+    setIsPending(true);
 
-    startTransition(async () => {
+    void (async () => {
       try {
         const response = await fetch(
           modeOverride === "login" ? "/api/auth/login" : "/api/auth/register",
           {
             method: "POST",
+            credentials: "same-origin",
+            cache: "no-store",
             headers: {
               "Content-Type": "application/json",
             },
@@ -86,14 +89,16 @@ export function AuthDialog({ open, onClose }: AuthDialogProps) {
 
         if (!response.ok || data.ok === false) {
           setError(data.error ?? "Something went wrong.");
+          setIsPending(false);
           return;
         }
 
-        window.location.reload();
+        window.location.assign(window.location.href);
       } catch {
         setError("Unable to contact the server right now.");
+        setIsPending(false);
       }
-    });
+    })();
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

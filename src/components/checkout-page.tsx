@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { useCart } from "@/components/cart-provider";
 import { formatCurrency } from "@/lib/format";
@@ -32,7 +32,7 @@ export function CheckoutPage({ user, savedAddress }: CheckoutPageProps) {
   const [address, setAddress] = useState<Address>(savedAddress ?? emptyAddress());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [message, setMessage] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const shippingFee = subtotal >= 75_000 ? 0 : items.length > 0 ? 1_800 : 0;
   const total = subtotal + shippingFee;
 
@@ -49,33 +49,43 @@ export function CheckoutPage({ user, savedAddress }: CheckoutPageProps) {
       return;
     }
 
-    startTransition(async () => {
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          paymentMethod,
-          address,
-          lines: items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-          })),
-        }),
-      });
+    setIsPending(true);
 
-      const data = (await response.json()) as { error?: string; order?: { id: number } };
+    void (async () => {
+      try {
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentMethod,
+            address,
+            lines: items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+            })),
+          }),
+        });
 
-      if (!response.ok) {
-        setMessage(data.error ?? "We couldn't place your order.");
-        return;
+        const data = (await response.json()) as { error?: string; order?: { id: number } };
+
+        if (!response.ok) {
+          setMessage(data.error ?? "We couldn't place your order.");
+          setIsPending(false);
+          return;
+        }
+
+        clearCart();
+        router.push(`/account?order=${data.order?.id ?? ""}`);
+        router.refresh();
+      } catch {
+        setMessage("We couldn't place your order.");
+        setIsPending(false);
       }
-
-      clearCart();
-      router.push(`/account?order=${data.order?.id ?? ""}`);
-      router.refresh();
-    });
+    })();
   }
 
   if (isReady && items.length === 0) {
@@ -111,7 +121,12 @@ export function CheckoutPage({ user, savedAddress }: CheckoutPageProps) {
             <strong>Login required</strong>
             <p>Use the login button in the header to create an account before checkout.</p>
           </div>
-        ) : null}
+        ) : (
+          <div className="notice-card">
+            <strong>Signed in as {user.email}</strong>
+            <p>Your saved address is ready below, and this order will be linked to your account.</p>
+          </div>
+        )}
 
         <div className="checkout-lines">
           {items.map((item) => (
@@ -119,7 +134,7 @@ export function CheckoutPage({ user, savedAddress }: CheckoutPageProps) {
               <div>
                 <strong>{item.name}</strong>
                 <p className="panel-copy">
-                  {item.category} • {item.material} • {item.color}
+                  {item.category} | {item.material} | {item.color}
                 </p>
                 <p className="panel-copy">{formatCurrency(item.price)}</p>
               </div>

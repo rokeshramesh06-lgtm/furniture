@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 
 import {
   destroySession,
-  serializeExpiredSessionCookie,
+  getSessionCookieOptions,
   SESSION_COOKIE,
-  shouldUseSecureCookie,
 } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -19,12 +18,11 @@ export async function POST(request: Request) {
 
   destroySession(token ? decodeURIComponent(token) : undefined);
 
-  return NextResponse.json(
-    { ok: true },
-    {
-      headers: {
-        "Set-Cookie": serializeExpiredSessionCookie(shouldUseSecureCookie(request)),
-      },
-    },
-  );
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(SESSION_COOKIE, "", {
+    ...getSessionCookieOptions(request),
+    expires: new Date(0),
+    maxAge: 0,
+  });
+  return response;
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, UserRound } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { AuthDialog } from "@/components/auth-dialog";
 import { useCart } from "@/components/cart-provider";
@@ -19,17 +19,23 @@ export function SiteHeader({ user }: SiteHeaderProps) {
   const { items, count, subtotal, updateQuantity, removeItem } = useCart();
   const [authOpen, setAuthOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   function isActive(path: string) {
     return pathname === path;
   }
 
   function handleLogout() {
-    startTransition(async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
-      window.location.reload();
-    });
+    setIsPending(true);
+
+    void (async () => {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      window.location.assign(window.location.href);
+    })();
   }
 
   return (
@@ -143,9 +149,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                   <div key={item.productId} className="cart-item">
                     <div className="cart-item__meta">
                       <strong>{item.name}</strong>
-                      <small>
-                        {item.category} • {item.color}
-                      </small>
+                      <small>{item.category} | {item.color}</small>
                       <small>{formatCurrency(item.price)}</small>
                     </div>
                     <div className="cart-item__actions">
@@ -184,7 +188,11 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                 <span>Subtotal</span>
                 <strong>{formatCurrency(subtotal)}</strong>
               </div>
-              <Link href="/checkout" className="button button-primary" onClick={() => setCartOpen(false)}>
+              <Link
+                href="/checkout"
+                className="button button-primary"
+                onClick={() => setCartOpen(false)}
+              >
                 Go to checkout
               </Link>
             </div>

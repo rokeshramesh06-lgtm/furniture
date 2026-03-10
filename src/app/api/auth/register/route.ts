@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 
 import {
   createSession,
+  getSessionCookieOptions,
   hashPassword,
-  serializeSessionCookie,
-  shouldUseSecureCookie,
+  SESSION_COOKIE,
 } from "@/lib/auth";
 import { createUser } from "@/lib/db";
 
@@ -34,19 +34,12 @@ export async function POST(request: Request) {
     });
 
     const session = createSession(user.id);
-
-    return NextResponse.json(
-      { ok: true, user },
-      {
-        headers: {
-          "Set-Cookie": serializeSessionCookie(
-            session.token,
-            session.expiresAt,
-            shouldUseSecureCookie(request),
-          ),
-        },
-      },
-    );
+    const response = NextResponse.json({ ok: true, user });
+    response.cookies.set(SESSION_COOKIE, session.token, {
+      ...getSessionCookieOptions(request),
+      expires: new Date(session.expiresAt),
+    });
+    return response;
   } catch (error) {
     const message =
       error instanceof Error && /unique|constraint/i.test(error.message)

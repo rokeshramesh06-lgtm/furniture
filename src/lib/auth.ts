@@ -40,10 +40,6 @@ export function verifyPassword(password: string, storedHash: string) {
   return saved.length === incoming.length && timingSafeEqual(saved, incoming);
 }
 
-function formatCookieDate(value: Date) {
-  return value.toUTCString();
-}
-
 export function shouldUseSecureCookie(request: Pick<Request, "url" | "headers">) {
   const origin = request.headers.get("origin");
 
@@ -82,37 +78,13 @@ export function shouldUseSecureCookie(request: Pick<Request, "url" | "headers">)
   }
 }
 
-export function serializeSessionCookie(token: string, expiresAt: string, secure = false) {
-  const parts = [
-    `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
-    "Path=/",
-    `Expires=${formatCookieDate(new Date(expiresAt))}`,
-    "HttpOnly",
-    "SameSite=Lax",
-  ];
-
-  if (secure) {
-    parts.push("Secure");
-  }
-
-  return parts.join("; ");
-}
-
-export function serializeExpiredSessionCookie(secure = false) {
-  const parts = [
-    `${SESSION_COOKIE}=`,
-    "Path=/",
-    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
-    "Max-Age=0",
-    "HttpOnly",
-    "SameSite=Lax",
-  ];
-
-  if (secure) {
-    parts.push("Secure");
-  }
-
-  return parts.join("; ");
+export function getSessionCookieOptions(request: Pick<Request, "url" | "headers">) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: shouldUseSecureCookie(request),
+    path: "/",
+  };
 }
 
 export function createSession(userId: number) {
