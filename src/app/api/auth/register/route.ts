@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 
-import {
-  createSession,
-  hashPassword,
-  serializeSessionCookie,
-} from "@/lib/auth";
+import { createSession, hashPassword, serializeSessionCookie } from "@/lib/auth";
 import { createUser } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -12,9 +8,8 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      username?: string;
+      name?: string;
       email?: string;
-      phone?: string;
       password?: string;
     };
 
@@ -28,13 +23,13 @@ export async function POST(request: Request) {
     }
 
     const user = createUser({
-      username: body.username?.trim() ?? "",
-      email: body.email,
-      phone: body.phone,
+      name: body.name?.trim() ?? "",
+      email: body.email?.trim() ?? "",
       passwordHash: hashPassword(password),
     });
 
     const session = createSession(user.id);
+
     return NextResponse.json(
       { ok: true, user },
       {
@@ -45,9 +40,8 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     const message =
-      error instanceof Error &&
-      /unique|constraint/i.test(error.message)
-        ? "That email, phone number, or username is already in use."
+      error instanceof Error && /unique|constraint/i.test(error.message)
+        ? "That email address is already registered."
         : error instanceof Error
           ? error.message
           : "Unable to create your account right now.";

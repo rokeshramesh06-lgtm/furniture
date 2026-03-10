@@ -5,73 +5,43 @@ import os from "node:os";
 import path from "node:path";
 
 declare global {
-  var __chattingStorageRoot: string | undefined;
+  var __atelierStorageRoot: string | undefined;
 }
 
-function tryPrepareDirectory(directory: string) {
+function prepareDirectory(directory: string) {
   mkdirSync(directory, { recursive: true });
   return directory;
 }
 
-function isLikelyReadOnlyRuntime() {
-  return (
-    process.cwd().startsWith("/var/task") ||
-    Boolean(process.env.VERCEL) ||
-    Boolean(process.env.AWS_EXECUTION_ENV) ||
-    Boolean(process.env.LAMBDA_TASK_ROOT)
-  );
-}
-
 function resolveStorageRoot() {
-  const envDirectory = process.env.CHATTING_STORAGE_DIR?.trim();
-  const tmpDirectory = path.join(os.tmpdir(), "velvetchat");
+  const preferredDirectory = process.env.ATELIER_STORAGE_DIR?.trim();
   const localDirectory = path.join(process.cwd(), "data");
-  const candidates = isLikelyReadOnlyRuntime()
-    ? [envDirectory, tmpDirectory, localDirectory]
-    : [envDirectory, localDirectory, tmpDirectory];
-  const validCandidates = candidates.filter(
+  const tempDirectory = path.join(os.tmpdir(), "atelier-furniture");
+  const candidates = [preferredDirectory, localDirectory, tempDirectory].filter(
     (value): value is string => Boolean(value),
   );
 
-  for (const candidate of validCandidates) {
+  for (const candidate of candidates) {
     try {
-      return tryPrepareDirectory(candidate);
+      return prepareDirectory(candidate);
     } catch {
       continue;
     }
   }
 
   throw new Error(
-    "Unable to prepare app storage. Set CHATTING_STORAGE_DIR to a writable directory.",
+    "Unable to prepare writable storage. Set ATELIER_STORAGE_DIR to a writable directory.",
   );
 }
 
 export function getStorageRoot() {
-  if (!globalThis.__chattingStorageRoot) {
-    globalThis.__chattingStorageRoot = resolveStorageRoot();
+  if (!globalThis.__atelierStorageRoot) {
+    globalThis.__atelierStorageRoot = resolveStorageRoot();
   }
 
-  return globalThis.__chattingStorageRoot;
+  return globalThis.__atelierStorageRoot;
 }
 
 export function getDatabaseFilePath() {
-  return path.join(getStorageRoot(), "chatting.sqlite");
-}
-
-export function getUploadsDirectory() {
-  const uploadsDirectory = path.join(getStorageRoot(), "uploads");
-  mkdirSync(uploadsDirectory, { recursive: true });
-  return uploadsDirectory;
-}
-
-export function getUploadPublicPath(fileName: string) {
-  return `/api/files/${encodeURIComponent(fileName)}`;
-}
-
-export function resolveUploadFilePath(fileName: string) {
-  return path.join(getUploadsDirectory(), path.basename(fileName));
-}
-
-export function isEphemeralStorage() {
-  return getStorageRoot().startsWith(os.tmpdir());
+  return path.join(getStorageRoot(), "atelier-furniture.sqlite");
 }

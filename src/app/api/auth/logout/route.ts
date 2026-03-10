@@ -1,35 +1,18 @@
 import { NextResponse } from "next/server";
 
-import {
-  destroySession,
-  serializeExpiredSessionCookie,
-  SESSION_COOKIE,
-} from "@/lib/auth";
+import { destroySession, serializeExpiredSessionCookie, SESSION_COOKIE } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-function readCookieFromHeader(headerValue: string | null, name: string) {
-  if (!headerValue) {
-    return undefined;
-  }
-
-  const prefix = `${name}=`;
-
-  for (const chunk of headerValue.split(";")) {
-    const value = chunk.trim();
-
-    if (value.startsWith(prefix)) {
-      return decodeURIComponent(value.slice(prefix.length));
-    }
-  }
-
-  return undefined;
-}
-
 export async function POST(request: Request) {
-  const token = readCookieFromHeader(request.headers.get("cookie"), SESSION_COOKIE);
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const token = cookieHeader
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .find((chunk) => chunk.startsWith(`${SESSION_COOKIE}=`))
+    ?.split("=")[1];
 
-  destroySession(token);
+  destroySession(token ? decodeURIComponent(token) : undefined);
 
   return NextResponse.json(
     { ok: true },

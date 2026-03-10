@@ -11,20 +11,21 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
-    identifier?: string;
+    email?: string;
     password?: string;
   };
 
-  const user = findUserForLogin(body.identifier ?? "");
+  const user = findUserForLogin(body.email ?? "");
 
   if (!user || !verifyPassword(body.password ?? "", user.passwordHash)) {
     return NextResponse.json(
-      { error: "We couldn't match those login details." },
+      { error: "We couldn't match that email and password." },
       { status: 401 },
     );
   }
 
   const session = createSession(user.id);
+
   return NextResponse.json(
     { ok: true },
     {

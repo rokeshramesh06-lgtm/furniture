@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import { Manrope } from "next/font/google";
+
+import { CartProvider } from "@/components/cart-provider";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -7,14 +9,9 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-display",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "VelvetChat",
-  description: "Elegant realtime conversations with Next.js and SQLite.",
+  title: "Atelier Form",
+  description: "A furniture portfolio and ordering storefront built with Next.js and SQLite.",
 };
 
 export default function RootLayout({
@@ -24,8 +21,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} ${spaceGrotesk.variable} antialiased`}>
-        {children}
+      <body className={manrope.variable}>
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );
