@@ -90,7 +90,7 @@ export function StorefrontPage({ user, snapshot }: StorefrontPageProps) {
         <div className="surface hero-visual">
           <div className="hero-scene">
             <Image
-              src="/furniture/room-scene.svg"
+              src="/furniture/room-scene-photo.jpg"
               alt="Furniture interior scene"
               fill
               loading="eager"
