@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       passwordHash: hashPassword(password),
     });
 
-    const session = createSession(user.id);
+    const session = createSession(user);
     const response = NextResponse.json({ ok: true, user });
     response.cookies.set(SESSION_COOKIE, session.token, {
       ...getSessionCookieOptions(request),

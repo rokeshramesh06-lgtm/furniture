@@ -2,8 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { getUserFromSessionTokenHash } from "@/lib/db";
-import { hashToken, SESSION_COOKIE } from "@/lib/auth";
+import { readSession, SESSION_COOKIE } from "@/lib/auth";
 
 export async function getSessionUser() {
   const cookieStore = await cookies();
@@ -13,7 +12,7 @@ export async function getSessionUser() {
     return null;
   }
 
-  return getUserFromSessionTokenHash(hashToken(token));
+  return readSession(token);
 }
 
 export async function requireSessionUser() {
